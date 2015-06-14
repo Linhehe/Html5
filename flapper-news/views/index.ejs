@@ -1,0 +1,163 @@
+﻿<head>
+	<title>Flapper News</title>
+	<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"><!--添加css样式文件-->
+	<!--<link href="/stylesheets/bootstrap.min.css" rel="stylesheet">-->
+	<script src="/javascripts/angular.min.js"></script>
+	<script src="/javascripts/angular-ui-router.js"></script><!--从第三方供应商引入路由机制-->
+	<script src="/javascripts/angularApp.js"></script>
+	<style> .glyphicon-thumbs-up { cursor:pointer } </style>
+</head>
+<body ng-app="flapperNews">
+
+<nav class="navbar navbar-default pull-right" ng-controller="NavCtrl">
+    <ul class="nav navbar-nav">
+      <li ng-show="isLoggedIn()"><a>{{ currentUser() }}</a></li>
+      <li ng-show="isLoggedIn()"><a href="" ng-click="logOut()">Log Out</a></li>
+      <li ng-hide="isLoggedIn()"><a href="/#/login">Log In</a></li>
+      <li ng-hide="isLoggedIn()"><a href="/#/register">Register</a></li>
+    </ul>
+  </nav>
+
+	<div class="row">
+		<div class="col-md-6 col-md-offset-3">
+			<ui-view></ui-view><!-- ui-router会实时检测 router是否发生变化，并通过该变化在此处显示对应的 template-->
+		</div>
+	</div>
+
+	<!--第一个页面-->
+	<script type="text/ng-template" id="/home.html">
+		<div class="page-header">
+			<h1>Flapper News</h1>
+		</div>
+
+		<div ng-repeat="post in posts | orderBy: '-upvotes'"><!--orderBy(排序依据)是属于filter(过滤器),其中在upvotes前面的-号表示降序-->
+			<!--ng-repeat相当于是在遍历数组!!-->
+			<span ng-click="incrementUpvotes(post)" class="glyphicon glyphicon-thumbs-up"></span><!--这里只是要添加一个可以用于点击增加 upvotes的值的控件,点击后触发 incrementUpvotes(post)函数,此处在每次数组遍历时都会把当前的post值传给了incrementUpvotes()函数--><!--此时是把<span>变成一只小手-->
+			{{post.upvotes}}
+			<span style="font-size:20px; margin-left:10px;">
+				<a ng-show="post.link" href="{{post.link}}">
+					{{post.title}}
+				</a><!--这里当用户有输入链接时,post.link存在，故会给ng-show返回true,所以这个时候的<a>标签就会显示出来；而如果用户没有输入链接,既post.link为空,就会给ng-show返回一个false,此时的<a>标签就会被不会被显示出来-->
+				<span ng-hide="post.link">
+					{{post.title}}
+				</span><!--这里的<span>是跟上面的<a>标签互补的，当用户输入了链接，就会给ng-hide返回一个true，此时的<span>标签就会被隐藏，反之则不会被隐藏，所以此处的<span>标签是不会和上面的<a>标签同时出现的-->
+			</span>
+			<span ng-show="post.author">
+			  posted by <a>{{post.author}}</a> |
+			</span>
+			<span>
+				<!--<a href="#/posts/{{$index}}">Comments</a>-->
+				<a href="#/posts/{{post._id}}">Comments</a>
+			</span><!--在这里放置评论(Comments)模块-->
+		</div>
+
+		<div ng-hide="isLoggedIn()">
+  <h3>You need to <a href="/#/login">Log In</a> or <a href="/#/register">Register</a> before you can add a post.</h3>
+</div>
+
+		<form ng-submit="addPost()" ng-show="isLoggedIn()" style="margin-top:30px;"><!--使用ng-submit提交可以在用户按下回车键的情况下也进行提交数据-->
+			<h3>Add a new post</h3>
+			<div class="form-group">
+				<input type="text" ng-model="title" placeholder="Title" class="form-control"/><!--ng-model="title"把用户输入的内容绑定到$scope,这样控制器(controller)就可以通过 $scope.title来访问用户输入的内容了-->
+			</div>
+			<div class="form-group">
+				<input type="text" ng-model="link" placeholder="Link" class="form-control"/><!--接收用户输入的链接(link)-->
+			</div>
+			<button type="submit" class="btn btn-primary">Post</button>
+		</form>
+	</script>
+
+	<!--第二个页面 (评论页面)-->
+	<script type="text/ng-template" id="/posts.html">
+		<div class="page-header">
+			<h3>
+				<a ng-show="post.link" href="{{post.link}}">
+					{{post.title}}
+				</a>
+				<span ng-hide="post.link">
+					{{post.title}}
+				</span>
+			</h3>
+		</div>
+		<div ng-repeat="comment in post.comments | orderBy:'-upvotes'">
+			<span class="glyphicon glyphicon-thumbs-up" ng-click="incrementUpvotes(comment)"></span>
+			{{comment.upvotes}} - by {{comment.author}}
+			<span style="font-size:20px; margin-left:10px;">
+				{{comment.body}}
+			</span>
+		</div>
+
+		<div ng-hide="isLoggedIn()">
+  <h3>You need to <a href="/#/login">Log In</a> or <a href="/#/register">Register</a> before you can comment.</h3>
+</div>
+
+		<form ng-submit="addComment()" ng-show="isLoggedIn()" style="margin-top:30px;">
+			<h3>Add a new comment</h3>
+
+			<div class="form-group">
+				<input type="text"
+				class="form-control"
+				placeholder="Comment"
+				ng-model="body"/>
+			</div>
+			<button type="submit" class="btn btn-primary">Post</button>
+		</form>
+	</script>
+	<script type="text/ng-template" id="/register.html">
+  <div class="page-header">
+    <h1>Flapper News</h1>
+  </div>
+
+  <div ng-show="error" class="alert alert-danger row">
+    <span>{{ error.message }}</span>
+  </div>
+
+  <form ng-submit="register()"
+    style="margin-top:30px;">
+    <h3>Register</h3>
+
+    <div class="form-group">
+      <input type="text"
+      class="form-control"
+      placeholder="Username"
+      ng-model="user.username"></input>
+    </div>
+    <div class="form-group">
+      <input type="password"
+      class="form-control"
+      placeholder="Password"
+      ng-model="user.password"></input>
+    </div>
+    <button type="submit" class="btn btn-primary">Register</button>
+  </form>
+</script>
+<script type="text/ng-template" id="/login.html">
+  <div class="page-header">
+    <h1>Flapper News</h1>
+  </div>
+
+  <div ng-show="error" class="alert alert-danger row">
+    <span>{{ error.message }}</span>
+  </div>
+
+  <form ng-submit="logIn()"
+    style="margin-top:30px;">
+    <h3>Log In</h3>
+
+    <div class="form-group">
+      <input type="text"
+      class="form-control"
+      placeholder="Username"
+      ng-model="user.username"></input>
+    </div>
+    <div class="form-group">
+      <input type="password"
+      class="form-control"
+      placeholder="Password"
+      ng-model="user.password"></input>
+    </div>
+    <button type="submit" class="btn btn-primary">Log In</button>
+  </form>
+  </script>
+</body>
+</html>
